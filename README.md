@@ -1,2 +1,2 @@
 # nanobiome
-Tools to convert EPI2ME output and analyze it in R
+Tools to convert EPI2ME output for 16S sequencing and analyze it in R.
