@@ -107,7 +107,7 @@ design <- model.matrix(~ 0 + group)
 colnames(design) <- levels(group)
 design
 dge.disp <- estimateDisp(dge.clean, design, robust = TRUE)
-sqrt(dge.disp$common.dispersion) #optimal between 0.2 and 0.4
+sqrt(dge.disp$common.dispersion)
 plotBCV(dge.disp)
 dge.fit <- glmQLFit(dge.disp, design, robust = TRUE)
 dge.fit
