@@ -131,14 +131,14 @@ write.table(experiment, file = "./experiment.edge.txt", quote = FALSE, sep="\t")
 #Wilcoxon rank test gives better control over the FDR than limma, EdgeR or DSeq2, so we implement
 #it here following their code, starting with the same DGEList object created above:
 counts.norm <- as.data.frame(cpm(dge.clean, log=F))
-#Run the Wilcoxon rank-sum test for each gene
+#Run the Wilcoxon rank-sum test for each OTU
 pvalues <- sapply(1:nrow(counts.norm),function(i){
   data<-cbind.data.frame(gene=as.numeric(t(counts.norm[i,])),group)
   p=wilcox.test(gene~group, data)$p.value
   return(p)
 })
 fdr=p.adjust(pvalues,method = "fdr")
-#Calculate fold-change for each gene
+#Calculate fold-change for each OTU
 conditionsLevel<-levels(group)
 dataCon1=counts.norm[,c(which(group==conditionsLevel[1]))]
 dataCon2=counts.norm[,c(which(group==conditionsLevel[2]))]
