@@ -1,5 +1,5 @@
 #Script to read the 16S csv output from EPI2ME, make an OTU table and analyze with edgeR.
-#Includes code from: https://github.com/ImagoXV/Epi2me_output_converter
+#Includes code from https://github.com/ImagoXV/Epi2me_output_converter and https://doi.org/10.1186/s13059-022-02648-4
 library(data.table)
 library(stringr)
 #Files from EPI2ME 16S analysis should be named with the date in format "DD_MM_YYYY.csv"
@@ -58,3 +58,101 @@ mg.clean <- mg.clean[!nospecies,]
 # Write OTU counts table:
 write.table(mg.clean, file = "OTU_table.txt", quote = F, sep = "\t", row.names = F)
 #
+#
+#DGE-like analysis of differentially represented OTUs with EdgeR####
+#
+library(edgeR)
+library(Glimma)
+counts <- mg.clean[,-1]
+rownames(counts) <- mg.clean[,1]
+#Create metadata dataframe:
+sampleinfo <- data.frame(row.names = colnames(counts))
+#
+#Create column with metadata. CHANGE THIS with your own data (careful here...):
+sampleinfo$treatment <- factor(c(rep("cont",4), rep("dis",4),rep("dis",4), rep("cont",4)))
+group <- sampleinfo$treatment
+dge <- DGEList(counts, group = group)
+#Filter rows with less than 5 counts in total
+thresh <- counts > 5
+table(rowSums(thresh))
+keep <- rowSums(thresh) >= 1
+summary(keep)
+dge.clean <- dge[keep, keep.lib.sizes = FALSE]
+# # Alternatively, Filter by Expression with custom args:
+# table(filterByExpr(dge, min.count = 3, min.total.count = 8,
+#                    large.n = 1, min.prop = 0.25))
+# keep <- filterByExpr(dge, min.count = 3, min.total.count = 8,
+#                      large.n = 1, min.prop = 0.25)
+# dge.clean <- dge[keep, keep.lib.sizes = FALSE]
+# 
+dge.clean <- calcNormFactors(dge.clean, method = "TMM")
+dge.clean$samples
+# Visualizations
+barplot(dge.clean$samples$lib.size, names=colnames(dge),las=2, cex.names = 0.6)
+boxplot(dge.clean$counts, xlab="", ylab="Counts",las=1, cex.axis=0.6, 
+        notch = TRUE)
+logcounts <- cpm(dge.clean, log=T)
+boxplot(logcounts, xlab="", ylab="Log2 counts per million",las=1, cex.axis=0.6, 
+        notch = TRUE)
+abline(h=median(logcounts), col="blue")
+#Heatmap of OTUS with most variation:
+var_otus <- apply(logcounts, 1, var)
+select_var <- names(sort(var_otus, decreasing=TRUE))[1:100]
+highly_variable_lcpm <- logcounts[select_var,]
+dim(highly_variable_lcpm)
+pheatmap::pheatmap(highly_variable_lcpm, scale = "row", fontsize_row = 3, annotation_col = sampleinfo)
+# MDS to check correct clustering, batch effects, etc:
+glimmaMDS(dge, width = 920, html = "./MDS.16S.html")
+#EdgeR
+design <- model.matrix(~ 0 + group)
+colnames(design) <- levels(group)
+design
+dge.disp <- estimateDisp(dge.clean, design, robust = TRUE)
+sqrt(dge.disp$common.dispersion)
+plotBCV(dge.disp)
+dge.fit <- glmQLFit(dge.disp, design, robust = TRUE)
+dge.fit
+colnames(dge.fit$coefficients)
+comparison <- makeContrasts(dis-cont, levels = design)
+enriched <- glmQLFTest(dge.fit, contrast = comparison)
+glimmaVolcano(enriched, dge = dge.clean, main="Cont vs. Dis", html = "./volcano.16S.html")
+summary(decideTests(enriched, p.value = 0.06, lfc=1))
+enriched.DE <- topTags(enriched, n=500, p.value = 0.06)
+dim(enriched.DE)
+dros <- abs(enriched.DE$table$logFC) > 1
+experiment.edge <- enriched.DE[dros,]
+dim(experiment.edge)
+heatgenes <- (logcounts[rownames(experiment.edge),])
+pheatmap::pheatmap(heatgenes, scale = "row", fontsize_row = 8, annotation_col = sampleinfo)
+# write to a file if we wish.
+write.table(experiment, file = "./experiment.edge.txt", quote = FALSE, sep="\t")
+#
+#This paper (https://doi.org/10.1186/s13059-022-02648-4) has shown that for n>=8, the traditional
+#Wilcoxon rank test gives better control over the FDR than limma, EdgeR or DSeq2, so we implement
+#it here following their code, starting with the same DGEList object created above:
+counts.norm <- as.data.frame(cpm(dge.clean, log=F))
+#Run the Wilcoxon rank-sum test for each gene
+pvalues <- sapply(1:nrow(counts.norm),function(i){
+  data<-cbind.data.frame(gene=as.numeric(t(counts.norm[i,])),group)
+  p=wilcox.test(gene~group, data)$p.value
+  return(p)
+})
+fdr=p.adjust(pvalues,method = "fdr")
+#Calculate fold-change for each gene
+conditionsLevel<-levels(group)
+dataCon1=counts.norm[,c(which(group==conditionsLevel[1]))]
+dataCon2=counts.norm[,c(which(group==conditionsLevel[2]))]
+foldChanges=log2(rowMeans(dataCon2)/rowMeans(dataCon1))
+#Output results base on FDR threshold
+outRst<-data.frame(log2foldChange=foldChanges, pValues=pvalues, FDR=fdr)
+rownames(outRst)=rownames(counts.norm)
+outRst=na.omit(outRst)
+fdrThres=0.1
+experiment.wilcox <- outRst[outRst$FDR<fdrThres,]
+write.table(outRst[outRst$FDR<fdrThres,], file="./examples.wilcox.txt",sep="\t",
+            quote=F,row.names = T,col.names = T)
+#
+heatgenes <- (logcounts[rownames(experiment.wilcox),])
+pheatmap::pheatmap(heatgenes, scale = "row", fontsize_row = 8, annotation_col = sampleinfo)
+#
+#Compare results from both tests and move on from there.
