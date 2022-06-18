@@ -1,10 +1,10 @@
 # nanobiome
-A pipeline to convert EPI2ME output of Oxford Nanopore Technologies (ONT) 16S sequencing protocols and analyze it in R.
+A pipeline to convert EPI2ME output from Oxford Nanopore Technologies (ONT) 16S sequencing protocols and analyze it in R.
 
-**nanobiome** is an R script that reads .csv files created with the EPI2ME 16S pipeline from (ONT).
-After sequencing and uploading FASTQ files to EPI2ME for alignment, ONT users have a .csv file. This script first reads all .csv files in the folder and creates a clean merged table of OTU counts. This is followed by an interactive MDS plot using the Glimma library, to check for potential batch effects.
+**nanobiome** is an R script that reads .csv files created with the EPI2ME 16S pipeline from ONT.
+After sequencing and uploading FASTQ files to EPI2ME for alignment, ONT users can download a 16S .csv file. This script first reads all .csv files in the folder and creates a clean merged table of OTU counts. We filter barcodes with < 2000 counts and OTUs with < 2 total counts in all samples in order to decrease sparsity, but we do not rarefy the table (users can change these thresholds). This is followed by the creation of an interactive MDS plot using the Glimma library, to check for general clustering of samples and potential batch effects.
 
-For Differantial Abundance (DA) analysis, we follow the recommendations from https://doi.org/10.1038/s41467-022-28034-z. First we filter barcodes with < 2000 counts and OTUs with < 2 total counts in all samples in order to decrease sparsity, but we do not rarefy the table.
+For Differantial Abundance (DA) analysis, we follow the recommendations from https://doi.org/10.1038/s41467-022-28034-z.
 Next we compare two different methods: limma-voom (with TMMwsp normalization) and ALDEx2 (which has shown very good performance in benchmarking studies).
 Users can compare the results from both strategies, and check heatmaps with Differentially Abundant OTUs (DAOs).
 
