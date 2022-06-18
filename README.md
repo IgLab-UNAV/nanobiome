@@ -1,10 +1,13 @@
 # nanobiome
-Tools to convert EPI2ME output for 16S sequencing and analyze it in R.
+A pipeline to convert EPI2ME output of Oxford Nanopore Technologies (ONT) 16S sequencing protocols and analyze it in R.
 
-epi2meR is an R script that reads .csv files created with the EPI2ME 16S pipeline from ONT, and creates a clean merged table of OTU counts for quick preliminary analysis, creating an interactive MDS plot.
-Assuming that the OTU counts table (very sparse) could be treated like counts tables from RNAseq experiments (a heavily contested assumption, so beware!), the script applies edgeR to obtain differentially represented OTUs (DROs) in two groups of samples.
-It has been shown that the Wilcoxon ranks test controls better for the FDR than tests based on the negative binomial (like edgeR or DSeq2) without losing power, when n >= 8, so the script also implements this test. Users can compare the results from both strategies, check heatmaps and interactive volcanoplots created with Glimma.
+**nanobiome** is an R script that reads .csv files created with the EPI2ME 16S pipeline from (ONT).
+After sequencing and uploading FASTQ files to EPI2ME for alignment, ONT users have a .csv file. This script first reads all .csv files in the folder and creates a clean merged table of OTU counts. This is followed by an interactive MDS plot using the Glimma library, to check for potential batch effects.
 
-The script can be run line-by-line. THE ONLY CHANGE USERS SHOULD MAKE is in line 72, where conditions (groups to be compared) should be specified.
+For Differantial Abundance (DA) analysis, we follow the recommendations from https://doi.org/10.1038/s41467-022-28034-z. First we filter barcodes with < 2000 counts and OTUs with < 2 total counts in all samples in order to decrease sparsity, but we do not rarefy the table.
+Next we compare two different methods: limma-voom (with TMMwsp normalization) and ALDEx2 (which has shown very good performance in benchmarking studies).
+Users can compare the results from both strategies, and check heatmaps with Differentially Abundant OTUs (DAOs).
 
-For more in-depth analyses, users are advised to download the wimp .csv files from EPI2ME and run the epi2me2r script from https://github.com/cran/epi2me2r which will create an object of the Phyloseq class that can be directly used in R using https://github.com/joey711/phyloseq
+The script can be run line-by-line, changing the metadata with groups to be compared, both for limma and for ALDEx2.
+
+For more in-depth analyses, like diversity, Sankey plots, etc, users are advised to download the wimp .csv files from EPI2ME and run the epi2me2r script from https://github.com/cran/epi2me2r which will create an object of the Phyloseq class that can be directly used in R using https://github.com/joey711/phyloseq
