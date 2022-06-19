@@ -9,7 +9,7 @@ library(ALDEx2)
 #Files from EPI2ME 16S analysis should be named with the date in format "DD_MM_YYYY.csv"
 getwd()
 # Read in .csv files.
-#**If EPI2ME 16S files are separated by semicolon (;) use read.csv2 in line 17**
+#**If EPI2ME 16S files are separated by semicolon (;) use read.csv2 in line 16**
 filenames <- list.files(pattern = "\\.csv")
 epi2me_table <- data.frame()
 for (i in filenames){
