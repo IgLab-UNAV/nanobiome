@@ -7,6 +7,6 @@ After sequencing and uploading FASTQ files to EPI2ME for alignment, ONT users ca
 For Differential Abundance (DA) analysis, we follow the recommendations from https://doi.org/10.1038/s41467-022-28034-z and implement two different methods: limma-voom (with TMMwsp normalization) and ALDEx2 (which has shown very good performance in benchmarking studies).
 Users can compare the results from both tools, and check heatmaps for Differentially Abundant OTUs (DAOs).
 
-The script can be run line-by-line, changing the metadata with groups of samples to be compared, both for limma and for ALDEx2. Be careful to ensure that you csv files are comma-delimited (check comments in the script about this issue). 
+The script can be run line-by-line, changing the metadata with groups of samples to be compared, both for limma and for ALDEx2. Check whether your csv files are comma-delimited (see comments in the script about this issue). 
 
 For further analyses, like diversity, Sankey plots, etc, users can download the wimp .csv files from EPI2ME and run the epi2me2r script from https://github.com/cran/epi2me2r which will create an object of the Phyloseq class to be directly used in R with https://github.com/joey711/phyloseq
