@@ -1,4 +1,4 @@
-#Script to read the 16S csv output from EPI2ME, make an OTU table and perform DA analysis.
+#Script to read the 16S csv output from EPI2ME, make an ASV table and perform DA analysis.
 library(data.table)
 library(stringr)
 library(edgeR)
@@ -25,7 +25,7 @@ rm(new_table)
 rm(epi2me_table)
 # Get a non-redundant vector of all barcodes present in file:
 samples <- sort(unique(epi2me_table.clean$barcode))
-#Create list object with OTUs in all barcodes:
+#Create list object with ASVs in all barcodes:
 Multi <- vector(mode='list', length = length(samples))
 names(Multi) <- samples
 for(i in 1:length(samples)){
@@ -34,7 +34,7 @@ for(i in 1:length(samples)){
     colnames(Multi[[i]]) <- c("Species", samples[i])
   }
 }
-#Merge all info for the final OTU counts table: 
+#Merge all info for the final ASV counts table: 
 mg <- merge(Multi[[1]], Multi[[2]], by = "Species", all = TRUE )
 for(i in 3:length(samples)){
   if(ncol(Multi[[i]])==2){
@@ -67,8 +67,8 @@ table(rownames(counts)=="")
 nospecies <- rownames(counts)==""
 counts <- counts[!nospecies,]
 # 
-# Write OTU counts table:
-write.table(counts, file = "OTU_table.txt", quote = F, sep = "\t", row.names = T)
+# Write ASV counts table:
+write.table(counts, file = "ASV_table.txt", quote = F, sep = "\t", row.names = T)
 #
 #
 # 2. Differential Abundance (DA) analysis####
@@ -121,19 +121,19 @@ names(fit)
 cont.matrix <- makeContrasts(bic_bic10 = pBIC - pBIC10, 
                              levels=design)
 cont.matrix
-# Run statistics between contrasts and eBayes shrinkage:
+# Run statistics between contrasts and empirical Bayes:
 fit.cont <- contrasts.fit(fit, cont.matrix)
 fit.cont <- eBayes(fit.cont)
-# Check number of DA OTUs with different adjusted p-value thresholds
+# Check number of DA ASVs with different adjusted p-value thresholds
 summary(decideTests(fit.cont, p.value = 0.05))
 #
-# Now get top DA OTUs for the contrast with desired values of adjusted p-value and logFC.
+# Now get top DA ASVs for the contrast with desired values of adjusted p-value and logFC.
 result.limma <- topTable(fit.cont, coef="bic_bic10", p.value = 0.01, lfc = 2, 
                          sort.by="logFC", resort.by = "logFC", number = 20000)
 dim(result.limma)
 # Check heatmap
-daos.limma <- rownames((result.limma))
-heatgenes <- (log.counts.cpm[daos.limma,])
+daas.limma <- rownames((result.limma))
+heatgenes <- (log.counts.cpm[daas.limma,])
 pheatmap::pheatmap(heatgenes, scale = "row", fontsize_row = 6, annotation_col = sampleinfo, legend = T)
 # write to a file if we wish.
 write.table(result.limma, file = "./result.limma.txt", quote = FALSE, sep="\t")
@@ -154,12 +154,12 @@ ALDEx2::aldex.plot(x.all, type="MA", test="welch", xlab="Log-ratio abundance",
 ALDEx2::aldex.plot(x.all, type="MW", test="welch", xlab="Dispersion",
                    ylab="Difference")
 #
-# Get results (DAOs below an FDR = 10%):
+# Get results (DAAs below an FDR = 10%):
 result.aldex <- x.all[x.all$we.eBH < 0.1,]
-daos.aldex <-rownames(result.aldex)
-heatgenes <- (log.counts.cpm[daos.aldex,])
+daas.aldex <-rownames(result.aldex)
+heatgenes <- (log.counts.cpm[daas.aldex,])
 pheatmap::pheatmap(heatgenes, scale = "row", fontsize_row = 6, annotation_col = sampleinfo, legend = T)
 #
 #Compare results from both tests (most likely all daos.aldex will be included in daos.limma):
-intersect(daos.aldex, daos.limma)
+intersect(daas.aldex, daas.limma)
 #
